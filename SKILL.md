@@ -1,230 +1,185 @@
 ---
 name: pdf-summarizer
-description: Knowledge and utilities for extracting, validating, and summarizing PDF documents. Use when users ask to summarize a PDF, create executive summaries, extract key points, generate section-wise summaries, or identify action items from PDF content.
-license: Complete terms in LICENSE.txt
+description: >
+  Summarizes PDF documents into clear, structured, and actionable summaries.
+  Use this skill whenever a user uploads, mentions, or references a PDF file and
+  asks for a summary, overview, key points, highlights, takeaways, or "what's in
+  this document". Also trigger when users say things like "read this PDF for me",
+  "give me the gist of this report", "what does this paper say?", "TL;DR this
+  document", or share a file path ending in .pdf and ask any question about its
+  content. Even if the user doesn't say the word "summary", trigger this skill
+  whenever they clearly want to understand the contents of a PDF without reading
+  it themselves. Always use this skill for multi-page documents, research papers,
+  legal contracts, financial reports, manuals, academic articles, or business
+  documents in PDF format.
 ---
 
-# PDF Summarizer
+# PDF Summarizer Skill
 
-A toolkit providing utilities and guidance for reliably extracting and summarizing PDF documents.
+This skill extracts text from a PDF document and produces a comprehensive,
+well-structured summary tailored to what the user actually needs.
 
-## Supported Tasks
+---
 
-Use this skill when the user asks to:
-- Summarize an entire PDF.
-- Create a short, medium, or detailed summary.
-- Produce an executive summary.
-- Summarize page-by-page or section-by-section.
-- Extract key points, findings, decisions, risks, or action items.
-- Focus the summary on specific topics or keywords.
-- Validate whether a PDF contains usable extractable text.
+## Step 1 — Extract Text from the PDF
 
-## Core Principles
-
-### Stay grounded in the PDF
-Summaries must be based on the content actually present in the document.
-- Do not invent facts, numbers, names, dates, or conclusions.
-- Preserve important terminology used in the source.
-- Clearly state when requested information is not present in the PDF.
-- Distinguish source content from any additional interpretation.
-
-### Preserve important details
-Prioritize:
-- Main purpose and conclusions.
-- Important facts, metrics, dates, names, and requirements.
-- Decisions, risks, dependencies, and action items.
-- Repeated themes and high-impact findings.
-
-Do not over-focus on boilerplate, repeated headers/footers, or low-value text.
-
-### Handle long PDFs in chunks
-For large PDFs:
-1. Extract page text.
-2. Split the document into logical chunks or page ranges.
-3. Summarize each chunk.
-4. Merge chunk summaries into one coherent final summary.
-5. Remove duplicates while preserving important details.
-
-## Recommended Summary Formats
-
-### Quick Summary
-Best for a fast overview.
-
-```text
-Summary
-- Main point 1
-- Main point 2
-- Main point 3
-```
-
-### Executive Summary
-Best for business or stakeholder documents.
-
-```text
-Executive Summary
-<2-5 concise paragraphs>
-
-Key Points
-- ...
-
-Risks / Issues
-- ...
-
-Action Items
-- ...
-```
-
-### Detailed Summary
-Best when the user needs more coverage.
-
-```text
-Overview
-...
-
-Section-wise Summary
-1. Section name
-   - ...
-
-Important Data / Metrics
-- ...
-
-Decisions
-- ...
-
-Action Items
-- ...
-```
-
-## Core Workflow
-
-```python
-from core.pdf_extractor import extract_pdf
-from core.summarizer import summarize_text
-from core.output_formatter import format_summary
-from core.validators import validate_pdf
-
-# 1. Validate the PDF
-passes, info = validate_pdf("document.pdf", verbose=True)
-if not passes:
-    raise ValueError(info.get("error", "PDF validation failed"))
-
-# 2. Extract text
-pdf_data = extract_pdf("document.pdf")
-
-# 3. Create a deterministic baseline summary
-summary = summarize_text(
-    pdf_data["text"],
-    max_sentences=10,
-    focus_terms=None,
-)
-
-# 4. Format the result
-output = format_summary(
-    title=pdf_data.get("title") or "PDF Summary",
-    summary=summary,
-    metadata=pdf_data,
-)
-
-print(output)
-```
-
-## Working with Scanned PDFs
-
-This skill extracts embedded PDF text. If a PDF is image-only or scanned and contains little or no extractable text:
-- Report that OCR is required.
-- Do not pretend that blank extraction means the document is empty.
-- If OCR tooling is available in the environment, OCR the relevant pages first and then summarize the OCR output.
-
-## Available Utilities
-
-### PDF Extractor (`core.pdf_extractor`)
-Extracts text and basic metadata from a PDF:
-
-```python
-from core.pdf_extractor import extract_pdf
-
-data = extract_pdf("document.pdf")
-print(data["page_count"])
-print(data["text"])
-```
-
-Optional page selection:
-
-```python
-data = extract_pdf("document.pdf", pages=[1, 2, 5])
-```
-
-Pages are 1-indexed for convenience.
-
-### Summarizer (`core.summarizer`)
-Provides a local extractive summarizer that does not require an API key:
-
-```python
-from core.summarizer import summarize_text
-
-summary = summarize_text(
-    text,
-    max_sentences=8,
-    focus_terms=["revenue", "risk", "timeline"],
-)
-```
-
-The extractive summarizer is useful as a deterministic baseline. When an LLM is available, prefer semantic summarization while following the grounding rules in this skill.
-
-### Output Formatter (`core.output_formatter`)
-Formats summaries into readable Markdown:
-
-```python
-from core.output_formatter import format_summary
-
-markdown = format_summary(
-    title="Quarterly Report Summary",
-    summary=summary,
-    key_points=["Point A", "Point B"],
-    action_items=["Action A"],
-)
-```
-
-### Validators (`core.validators`)
-Checks that a PDF exists, can be opened, has pages, and contains extractable text:
-
-```python
-from core.validators import validate_pdf, is_pdf_ready
-
-passes, info = validate_pdf("document.pdf", verbose=True)
-
-if is_pdf_ready("document.pdf"):
-    print("Ready to summarize")
-```
-
-## Summary Quality Checklist
-
-Before returning a summary, check that:
-- The summary reflects the actual PDF content.
-- Important numbers, dates, names, and decisions are preserved accurately.
-- Repeated content is consolidated.
-- The level of detail matches the user's request.
-- No unsupported claims have been added.
-- Action items are only included when the document actually contains or clearly implies them.
-- Any unreadable, missing, or image-only content is explicitly noted.
-
-## Philosophy
-
-This skill provides:
-- **Knowledge**: A reliable workflow for PDF summarization.
-- **Utilities**: PDF extraction, validation, baseline summarization, and formatting.
-- **Flexibility**: Supports short, detailed, executive, topic-focused, and page-focused summaries.
-
-It does NOT provide:
-- OCR by itself.
-- Guaranteed extraction from encrypted or damaged PDFs.
-- Automatic factual enrichment from the internet.
-- Permission to infer missing content.
-
-Use the PDF as the source of truth and keep summaries concise, accurate, and useful.
-
-## Dependencies
+Use the bundled extraction script to pull text from the PDF:
 
 ```bash
-pip install pypdf
+python pdf-summarizer/scripts/extract_pdf.py "<path_to_pdf>"
 ```
+
+The script outputs:
+- Extracted text (page by page)
+- Page count
+- Detected document type (if possible)
+
+If the PDF is image-based or scanned (no selectable text), the script will
+notify you. In that case, inform the user that OCR is required and suggest they
+use a tool like Adobe Acrobat or Google Drive to convert it first, or try the
+OCR fallback below.
+
+**OCR fallback** (if `pytesseract` is available):
+```bash
+python pdf-summarizer/scripts/extract_pdf.py "<path_to_pdf>" --ocr
+```
+
+---
+
+## Step 2 — Understand the User's Intent
+
+Before writing the summary, consider what the user actually needs:
+
+| User says… | What they probably want |
+|---|---|
+| "Summarize this" | Full structured summary |
+| "Key points / takeaways" | Bullet-point highlights only |
+| "What's the main argument?" | Core thesis/conclusion only |
+| "TL;DR" | 3–5 sentence executive summary |
+| "Summarize for a non-expert" | Plain-language explanation |
+| "Legal/financial summary" | Structured by clauses/sections with key obligations, dates, figures |
+| "Give me the data/numbers" | Focus on statistics, figures, tables |
+
+Adapt the output format to match the request. If no specific format is
+requested, use the FULL STRUCTURED SUMMARY format below.
+
+---
+
+## Step 3 — Write the Summary
+
+### Full Structured Summary (default)
+
+Use this template:
+
+```
+# Summary: [Document Title or Filename]
+
+## 📄 Document Overview
+- **Type**: [Report / Research Paper / Legal Contract / Manual / Article / Other]
+- **Length**: [X pages]
+- **Author(s)/Source**: [if available]
+- **Date**: [if available]
+
+## 🔑 Key Takeaways
+- [Most important point]
+- [Second most important point]
+- [Third most important point]
+(3–7 bullets, each one concrete and specific — not vague)
+
+## 📝 Detailed Summary
+[Section-by-section or topic-by-topic summary. Match the structure of the
+original document where possible. Each section should be 2–5 sentences.
+Aim for completeness without padding.]
+
+## 📊 Important Data / Figures
+[Any notable statistics, numbers, dates, financial figures, percentages —
+only if present in the document]
+
+## ✅ Conclusions / Recommendations
+[What the document concludes, recommends, or calls the reader to do]
+
+## ❓ Potential Questions This Raises
+[1–3 questions a reader might want answered after reading this]
+```
+
+Omit any section that isn't applicable to the document (e.g., no "Important
+Data" section for a short opinion piece).
+
+---
+
+### Short Formats
+
+**TL;DR / Executive Summary** (when user asks for brief/quick version):
+```
+**TL;DR — [Document Title]**
+
+[3–5 sentences covering: what it is, what it says, and why it matters.]
+
+Key points:
+- ...
+- ...
+- ...
+```
+
+**Bullet Points Only** (when user asks for key points/takeaways):
+```
+**Key Points — [Document Title]**
+- ...
+- ...
+- ...
+```
+
+---
+
+## Step 4 — Handle Special Document Types
+
+Read `references/document-types.md` for guidance on summarizing specific
+document types including:
+- Legal contracts and agreements
+- Research papers and academic articles
+- Financial reports and earnings documents
+- Technical manuals and documentation
+- News articles and blog posts
+- Government and policy documents
+
+---
+
+## Step 5 — Quality Check
+
+Before presenting the summary, verify:
+
+- [ ] The summary reflects the **actual content** of the document (don't
+      hallucinate or fill gaps with assumptions)
+- [ ] All specific figures, names, dates, and claims come from the PDF text
+- [ ] The length and format match what the user asked for
+- [ ] Jargon is either preserved (for expert audiences) or explained (for
+      general audiences)
+- [ ] No critical information has been dropped that a reader would feel was
+      "missing"
+
+---
+
+## Step 6 — Offer Follow-Up
+
+After presenting the summary, always offer:
+
+> "Would you like me to dive deeper into any specific section, extract all
+> figures/data, answer questions about the document, or reformat this summary
+> in a different way?"
+
+This gives the user a clear path to get more out of the document.
+
+---
+
+## Tips for Better Summaries
+
+- **Length calibration**: A 5-page document needs a shorter summary than a
+  50-page one. Aim for roughly 10–15% of the original length in words.
+- **Stay grounded**: Never infer things not in the text. If something is
+  ambiguous, say so.
+- **Use the document's own language** for key terms, names, and branded concepts.
+- **Chunk large PDFs**: If a document exceeds ~100 pages, summarize it in
+  logical chunks (by chapter, part, or section) and then produce an overall
+  executive summary at the top.
+- **Signal uncertainty**: If extraction was incomplete or pages were missing,
+  note that in the overview section.
